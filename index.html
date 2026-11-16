@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Bài Joker – game poker roguelike</title>
-<link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
 :root{--felt:#1f5c4d;--felt2:#0f3a30;--panel:#2b3b3f;--panel2:#1c282b;--red:#ff4c40;--blue:#009dff;--gold:#f5b324;--card:#f4f1e6;--ink:#1a1d24;--txt:#f6f3e8;--ok:#4bc292;
 box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
@@ -12,7 +12,7 @@ box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:en
 :root[data-theme="dark"]{--felt:#1f5c4d}
 html{scroll-padding-top:env(safe-area-inset-top,0px)}
 *{box-sizing:border-box}
-body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 40%,var(--felt) 0%,var(--felt2) 75%);color:var(--txt);font-family:'Lilita One','Trebuchet MS',system-ui,sans-serif;letter-spacing:.02em;overflow-x:hidden}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 40%,var(--felt) 0%,var(--felt2) 75%);color:var(--txt);font-family:'Be Vietnam Pro','Segoe UI',system-ui,sans-serif;letter-spacing:0;overflow-x:hidden}
 body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.08;background-image:radial-gradient(#fff 1px,transparent 1px);background-size:5px 5px;mix-blend-mode:overlay}
 button{font:inherit;color:#fff;border:0;border-radius:8px;padding:10px 18px;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.45);transition:transform .08s}
 button:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.45)}
@@ -59,8 +59,8 @@ button:focus-visible,.card:focus-visible{outline:3px solid var(--gold);outline-o
 .bl.cur{opacity:1;border-color:var(--gold)}
 .modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:14px;z-index:20}
 .fx{position:fixed;inset:0;pointer-events:none;z-index:30;overflow:hidden}.float{position:absolute;font-size:1.45rem;color:var(--gold);text-shadow:2px 2px #321;animation:floatUp .9s ease-out forwards;white-space:nowrap}.float.blue{color:#7ed7ff}.float.red{color:#ff827c}.float.big{font-size:2.2rem}@keyframes floatUp{0%{opacity:0;transform:translate(-50%,10px) scale(.7)}15%{opacity:1}100%{opacity:0;transform:translate(-50%,-90px) scale(1.15)}}
-.mb{background:var(--panel2);border:4px solid #7d949a;border-radius:16px;max-width:520px;width:100%;max-height:90vh;overflow:auto;padding:18px;font-family:system-ui,sans-serif;letter-spacing:0;line-height:1.5}
-.mb h2{font-family:'Lilita One',sans-serif;font-weight:400;margin:0 0 8px;color:var(--gold)}
+.mb{background:var(--panel2);border:4px solid #7d949a;border-radius:16px;max-width:520px;width:100%;max-height:90vh;overflow:auto;padding:18px;font-family:'Be Vietnam Pro','Segoe UI',system-ui,sans-serif;letter-spacing:0;line-height:1.5}
+.mb h2{font-family:'Be Vietnam Pro','Segoe UI',system-ui,sans-serif;font-weight:800;margin:0 0 8px;color:var(--gold)}
 .mb table{width:100%;border-collapse:collapse;font-size:.9rem}.mb td,.mb th{padding:4px 6px;text-align:left;border-bottom:1px solid #3d5257}
 .top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
 .msg{min-height:1.4rem;text-align:center;color:var(--gold)}.card.e-glass{background:#d4f1ff}.card.e-gold{background:#ffe27a}.card.s-red{border-color:#ff4c40;border-width:3px}.card.e-steel{background:#c7d0d6}.card.s-gold{border-color:#f5b324;border-width:3px}.card.s-blue{border-color:#009dff;border-width:3px}.card.s-purple{border-color:#a24cff;border-width:3px}.card:hover:not(.sel){transform:translateY(-6px) rotate(-2deg)}.joker:hover{transform:rotate(2deg)}@keyframes pop{0%{transform:scale(1.25)}100%{transform:scale(1)}}.cm span{animation:pop .15s}@media (prefers-reduced-motion:reduce){.cm span{animation:none}.card:hover:not(.sel),.joker:hover{transform:none}}
