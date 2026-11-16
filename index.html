@@ -1,0 +1,465 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Bài Joker – game poker roguelike</title>
+<link href="https://fonts.googleapis.com/css2?family=Lilita+One&display=swap" rel="stylesheet">
+<style>
+:root{--felt:#1f5c4d;--felt2:#0f3a30;--panel:#2b3b3f;--panel2:#1c282b;--red:#ff4c40;--blue:#009dff;--gold:#f5b324;--card:#f4f1e6;--ink:#1a1d24;--txt:#f6f3e8;--ok:#4bc292;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);color-scheme:dark}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--felt:#1f5c4d}}
+:root[data-theme="dark"]{--felt:#1f5c4d}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box}
+body{margin:0;min-height:100vh;background:radial-gradient(ellipse at 50% 40%,var(--felt) 0%,var(--felt2) 75%);color:var(--txt);font-family:'Lilita One','Trebuchet MS',system-ui,sans-serif;letter-spacing:.02em;overflow-x:hidden}
+body:before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.08;background-image:radial-gradient(#fff 1px,transparent 1px);background-size:5px 5px;mix-blend-mode:overlay}
+button{font:inherit;color:#fff;border:0;border-radius:8px;padding:10px 18px;cursor:pointer;box-shadow:0 4px 0 rgba(0,0,0,.45);transition:transform .08s}
+button:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.45)}
+button:disabled{opacity:.4;cursor:default}
+button:focus-visible,.card:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.b-red{background:var(--red)}.b-blue{background:var(--blue)}.b-gold{background:var(--gold);color:#3a2a00}.b-grey{background:#566a70}
+#app{display:grid;grid-template-columns:230px 1fr;gap:14px;max-width:1100px;margin:0 auto;padding:12px;min-height:100vh}
+.side{background:var(--panel2);border:3px solid #4d6469;border-radius:14px;padding:12px;display:flex;flex-direction:column;gap:10px;align-self:start}
+.blind{background:var(--blue);border-radius:10px;padding:8px 10px;text-align:center;font-size:1.25rem;box-shadow:inset 0 -4px 0 rgba(0,0,0,.3)}
+.blind.boss{background:#a4402f}.blind.big{background:#d78b1c}
+.box{background:var(--panel);border-radius:10px;padding:8px 10px}
+.box small{display:block;opacity:.75;font-size:.8rem}
+.score{font-size:2rem;color:#fff;text-align:center}
+.prev{text-align:center;min-height:86px}
+.prev .hn{font-size:1.15rem}
+.cm{display:flex;justify-content:center;gap:6px;align-items:center;font-size:1.5rem;margin-top:4px}
+.cm .c{background:var(--blue);padding:2px 10px;border-radius:6px;min-width:60px}
+.cm .m{background:var(--red);padding:2px 10px;border-radius:6px;min-width:60px}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.grid2 .box{text-align:center;font-size:1.3rem}
+.money{color:var(--gold)}
+.main{display:flex;flex-direction:column;gap:14px;min-width:0}
+.row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.slots{min-height:150px;background:rgba(0,0,0,.22);border-radius:14px;padding:10px;display:flex;gap:10px;justify-content:center;align-items:flex-start;flex-wrap:wrap}
+.joker{width:96px;background:linear-gradient(160deg,#6a4cc9,#3b2a8a);border:3px solid #cfc3ff;border-radius:10px;padding:6px;text-align:center;font-size:.8rem;position:relative}
+.joker small{display:block;font:600 .58rem system-ui;opacity:.85;text-transform:uppercase}.joker.rarity-uncommon{border-color:#65d889}.joker.rarity-rare{border-color:#ff9d43;background:linear-gradient(160deg,#a24b2c,#54261c)}.joker.rarity-legendary{border-color:#f5b324;background:linear-gradient(160deg,#b56c25,#5f3212)}
+.joker b{display:block;font-weight:400;font-size:.95rem;color:#ffe27a}
+.joker p{margin:4px 0;line-height:1.15;font-family:system-ui,sans-serif;font-size:.7rem;letter-spacing:0}
+.joker button{padding:3px 8px;font-size:.75rem;width:100%}
+.hand{display:flex;justify-content:center;gap:6px;min-height:130px;align-items:flex-end;flex-wrap:wrap}
+.card{width:72px;height:104px;background:var(--card);color:var(--ink);border-radius:8px;border:2px solid #b9b39a;box-shadow:0 4px 0 rgba(0,0,0,.4);display:flex;flex-direction:column;justify-content:space-between;padding:4px 7px;font-size:1.6rem;cursor:pointer;user-select:none;transition:transform .12s,filter .12s;position:relative}
+.card:after{content:attr(data-badge);position:absolute;right:3px;top:3px;font:700 .62rem system-ui;color:#333;background:#fff9;border-radius:4px;padding:1px 3px}
+.card.debuff{filter:grayscale(1) brightness(.65);border-color:#e35b58!important}
+.card.debuff:before{content:"DEBUFF";position:absolute;inset:38% 0 auto;text-align:center;font:700 .55rem system-ui;color:#fff;background:#a52d2d;padding:2px;z-index:1}
+.card.r{color:#d3302a}.card.e-chip{background:#cfe6ff}.card.e-mult{background:#ffd3cf}.card.e-x{background:#ffe9b0}.card.e-bonus{background:#d9ffd0}.card.e-lucky{background:#fff0a8}.card.e-wild{background:linear-gradient(135deg,#fff,#e4c8ff)}.card.e-stone{background:#aeb8bf;color:#20262a;border-color:#e4edf2}.card.e-stone .s{visibility:hidden}
+.card .s{font-size:2.1rem;text-align:center;line-height:1}
+.card.sel{transform:translateY(-22px) scale(1.03);border-color:var(--gold);box-shadow:0 4px 0 rgba(0,0,0,.4),0 0 0 3px var(--gold)}
+.tt{font-size:1.9rem;text-align:center;margin:4px 0}
+.shopgrid{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.item{display:flex;flex-direction:column;align-items:center;gap:6px}
+.planet{width:104px;min-height:116px;background:linear-gradient(160deg,#1f78d1,#123e7a);border:3px solid #9fd0ff;border-radius:10px;text-align:center;padding:6px;font-size:.85rem}
+.blinds{display:flex;gap:14px;flex-wrap:wrap;justify-content:center}
+.bl{width:200px;background:var(--panel2);border:3px solid #4d6469;border-radius:14px;padding:12px;text-align:center;display:flex;flex-direction:column;gap:8px;opacity:.55}
+.bl.cur{opacity:1;border-color:var(--gold)}
+.modal{position:fixed;inset:0;background:rgba(0,0,0,.72);display:flex;align-items:center;justify-content:center;padding:14px;z-index:20}
+.fx{position:fixed;inset:0;pointer-events:none;z-index:30;overflow:hidden}.float{position:absolute;font-size:1.45rem;color:var(--gold);text-shadow:2px 2px #321;animation:floatUp .9s ease-out forwards;white-space:nowrap}.float.blue{color:#7ed7ff}.float.red{color:#ff827c}.float.big{font-size:2.2rem}@keyframes floatUp{0%{opacity:0;transform:translate(-50%,10px) scale(.7)}15%{opacity:1}100%{opacity:0;transform:translate(-50%,-90px) scale(1.15)}}
+.mb{background:var(--panel2);border:4px solid #7d949a;border-radius:16px;max-width:520px;width:100%;max-height:90vh;overflow:auto;padding:18px;font-family:system-ui,sans-serif;letter-spacing:0;line-height:1.5}
+.mb h2{font-family:'Lilita One',sans-serif;font-weight:400;margin:0 0 8px;color:var(--gold)}
+.mb table{width:100%;border-collapse:collapse;font-size:.9rem}.mb td,.mb th{padding:4px 6px;text-align:left;border-bottom:1px solid #3d5257}
+.top{display:flex;justify-content:space-between;align-items:center;margin-bottom:6px}
+.msg{min-height:1.4rem;text-align:center;color:var(--gold)}.card.e-glass{background:#d4f1ff}.card.e-gold{background:#ffe27a}.card.s-red{border-color:#ff4c40;border-width:3px}.card.e-steel{background:#c7d0d6}.card.s-gold{border-color:#f5b324;border-width:3px}.card.s-blue{border-color:#009dff;border-width:3px}.card.s-purple{border-color:#a24cff;border-width:3px}.card:hover:not(.sel){transform:translateY(-6px) rotate(-2deg)}.joker:hover{transform:rotate(2deg)}@keyframes pop{0%{transform:scale(1.25)}100%{transform:scale(1)}}.cm span{animation:pop .15s}@media (prefers-reduced-motion:reduce){.cm span{animation:none}.card:hover:not(.sel),.joker:hover{transform:none}}
+@media (max-width:760px){#app{grid-template-columns:1fr}.card{width:58px;height:86px;font-size:1.3rem}.card .s{font-size:1.7rem}.hand{gap:4px}.joker{width:84px}}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+<div id="modal"></div>
+<div id="fx" class="fx" aria-live="polite"></div>
+<script>
+const $=s=>document.querySelector(s);
+const SU=['♠','♥','♦','♣'],RN={11:'J',12:'Q',13:'K',14:'A'};
+const HT={sf:['Sảnh thùng',100,8,40,4],flh:['Thùng cù lũ',140,12,50,5],five:['Năm lá',120,12,50,5],f4:['Tứ quý',60,7,30,3],fh:['Cù lũ',40,4,25,2],fl:['Thùng',35,4,15,2],st:['Sảnh',30,4,30,3],t3:['Sám cô',30,3,20,2],p2:['Hai đôi',20,2,20,1],p1:['Đôi',10,2,15,1],hc:['Bài cao',5,1,10,1]};
+const TARGET=[300,800,2000,5000,11000,20000,35000,50000];
+const BL=[{n:'Vòng nhỏ',k:1,r:3,c:'small'},{n:'Vòng lớn',k:1.5,r:4,c:'big'},{n:'Trùm',k:2,r:5,c:'boss'}];
+const cv=r=>r==14?11:r>10?10:r;
+const RARITY={common:'Thường',uncommon:'Không thường',rare:'Hiếm',legendary:'Huyền thoại'};
+const J=[
+{n:'Joker',cost:2,d:'+4 Mult',hand:x=>[0,4]},
+{n:'Tham lam',cost:5,d:'Lá ♦ ghi điểm: +3 Mult',card:(c)=>c.s==2?[0,3]:0},
+{n:'Dục vọng',cost:5,d:'Lá ♥ ghi điểm: +3 Mult',card:c=>c.s==1?[0,3]:0},
+{n:'Giận dữ',cost:5,d:'Lá ♠ ghi điểm: +3 Mult',card:c=>c.s==0?[0,3]:0},
+{n:'Háu ăn',cost:5,d:'Lá ♣ ghi điểm: +3 Mult',card:c=>c.s==3?[0,3]:0},
+{n:'Vui nhộn',cost:3,d:'+8 Mult nếu có Đôi',hand:x=>x.pair?[0,8]:0},
+{n:'Điên rồ',cost:4,d:'+12 Mult nếu có Sám cô',hand:x=>x.tri?[0,12]:0},
+{n:'Láu cá',cost:3,d:'+50 Chips nếu có Đôi',hand:x=>x.pair?[50,0]:0},
+{n:'Tối giản',cost:5,d:'+20 Mult nếu đánh ≤3 lá',hand:x=>x.n<=3?[0,20]:0},
+{n:'Biểu ngữ',cost:5,d:'+30 Chips mỗi lượt xả còn lại',hand:x=>[30*x.disc,0]},
+{n:'Trừu tượng',cost:4,d:'+3 Mult mỗi Joker đang có',hand:x=>[0,3*x.jn]},
+{n:'Học giả',cost:4,d:'Át ghi điểm: +20 Chips, +4 Mult',card:c=>c.r==14?[20,4]:0},
+{n:'Chẵn Steven',cost:4,d:'Lá chẵn ghi điểm: +4 Mult',card:c=>c.r<=10&&c.r%2==0?[0,4]:0},
+{n:'Lẻ Todd',cost:4,d:'Lá lẻ ghi điểm: +31 Chips',card:c=>(c.r==14||(c.r<=9&&c.r%2==1))?[31,0]:0},
+{n:'Song sinh',cost:8,d:'×2 Mult nếu có Đôi',hand:x=>x.pair?[0,0,2]:0},
+{n:'Mặt người',cost:4,d:'J, Q, K ghi điểm: +3 Mult',card:c=>c.r>=11&&c.r<=13?[0,3]:0},
+{n:'Bò mộng',cost:6,d:'+2 Chips cho mỗi $ đang có',hand:x=>[2*Math.max(0,x.money),0]},
+{n:'Vàng ròng',cost:6,d:'+$2 cuối mỗi vòng',gold:2},
+{n:'Cú chót',cost:5,d:'+25 Mult ở lượt đánh cuối',hand:x=>x.last?[0,25]:0},
+{n:'Cô đơn',cost:6,d:'×3 Mult nếu chỉ có Bài cao',hand:x=>x.t=='hc'?[0,0,3]:0},
+{n:'Sảnh thủ',cost:5,d:'+100 Chips nếu là Sảnh',hand:x=>x.t=='st'||x.t=='sf'?[100,0]:0},
+{n:'Thùng thủ',cost:5,d:'+80 Chips nếu là Thùng',hand:x=>x.t=='fl'||x.t=='sf'?[80,0]:0},
+{n:'Hai đôi',cost:4,d:'+10 Mult nếu là Hai đôi',hand:x=>x.t=='p2'?[0,10]:0},
+{n:'Đại gia',cost:7,d:'×1.5 Mult nếu có từ $20',hand:x=>x.money>=20?[0,0,1.5]:0},
+{n:'Đen đỏ',cost:4,d:'Lá ♠ và ♣ ghi điểm: +2 Mult',card:c=>c.s==0||c.s==3?[0,2]:0},
+{n:'Cù lũ vàng',cost:6,d:'×3 Mult nếu là Cù lũ',hand:x=>x.t=='fh'?[0,0,3]:0},
+{n:'Cuộn tuyết',cost:6,d:'Mỗi lần đánh tích thêm +2 Mult',hand:(x,j)=>[0,2*(j.v||0)],grow:1},
+{n:'Bậc thầy',cost:10,d:'×1.5 Mult luôn luôn',hand:x=>[0,0,1.5]},
+{n:'Ma thuật',cost:9,d:'×2 Mult nếu đánh đúng 5 lá',hand:x=>x.n==5?[0,0,2]:0},
+{n:'Nhà thầu rác',cost:6,d:'Nhận $1 mỗi lần xả bài',dm:1},
+{n:'Túi lớn',cost:7,d:'+1 cỡ tay (tính từ vòng sau)',hsz:1},
+{n:'Đồng hồ cát',cost:8,d:'+1 lượt đánh mỗi vòng (tính từ vòng sau)',hh:1},
+{n:'Bản sao',cost:10,d:'Sao chép hiệu ứng Joker bên phải (loại theo tổ hợp)',hand:(x,j)=>{const R=G.jokers[G.jokers.indexOf(j)+1];return R&&R.hand&&!R.copy?R.hand(x,R):0},copy:1},
+{n:'Bốn ngón',cost:7,d:'Sảnh và Thùng chỉ cần 4 lá',four:1},
+{n:'Đường tắt',cost:6,d:'Sảnh được phép nhảy cách 1 bậc (vd 3-5-6-7-9)',gap:1},
+{n:'Hoàng gia',cost:8,d:'×2 Mult nếu là Thùng',hand:x=>x.t=='fl'||x.t=='sf'?[0,0,2]:0},
+{n:'Tứ vị',cost:8,d:'×3 Mult nếu có Tứ quý',hand:x=>x.t=='f4'?[0,0,3]:0},
+{n:'Cực đoan',cost:6,d:'+15 Mult nếu đánh 1 lá',hand:x=>x.n==1?[0,15]:0},
+{n:'Gấp đôi',cost:5,d:'+12 Mult nếu là Hai đôi hoặc Cù lũ',hand:x=>x.t=='p2'||x.t=='fh'?[0,12]:0},
+{n:'Mặt đỏ',cost:4,d:'Lá ♥ và ♦ ghi điểm: +2 Mult',card:c=>c.s==1||c.s==2?[0,2]:0},
+{n:'Kẻ tiết kiệm',cost:6,d:'+1 Mult mỗi $3 đang có',hand:x=>[0,Math.floor(x.money/3)]},
+{n:'Ván cuối',cost:6,d:'+100 Chips ở lượt đánh cuối',hand:x=>x.last?[100,0]:0},
+{n:'Phú ông',cost:9,d:'×2 Mult nếu có từ $30',hand:x=>x.money>=30?[0,0,2]:0},
+{n:'Cốt lõi',cost:5,d:'Lá 2–5 ghi điểm: +10 Chips, +3 Mult',card:c=>c.r<=5?[10,3]:0},
+{n:'Cái ấm',cost:6,d:'+2 Mult mỗi lượt xả còn lại',hand:x=>[0,2*x.disc]},
+{n:'Người giữ',cost:6,d:'Mỗi lá giữ trên tay: +3 Chips',held:c=>[3,0]},
+{n:'Thùng rác',cost:5,d:'Mỗi lần xả: +3 Mult',discard:x=>[0,3]},
+{n:'Máy đếm',cost:7,d:'Mỗi lần đánh tay: +1 Mult tích lũy',hand:(x,j)=>[0,j.v||0],grow:1,gs:j=>'đang +'+(j.v||0)},
+{n:'Nhà sưu tầm',cost:8,d:'Cuối vòng: +$1 cho mỗi Joker',end:x=>x.jn},
+{n:'Kẻ liều lĩnh',cost:6,d:'×2 Mult nếu còn đúng 1 lượt đánh',hand:x=>x.last?[0,0,2]:0},
+{n:'Mắt cú',cost:5,d:'+20 Chips nếu hand có 4 chất khác nhau',hand:x=>x.suits==4?[20,0]:0}
+,{n:'Bánh răng',cost:7,d:'Lá đầu tiên ghi điểm được kích hoạt lại',repeat:1}
+,{n:'Cầu vồng',cost:8,d:'Mỗi chất khác nhau trong hand: +4 Mult',hand:x=>[0,4*x.suits]}
+,{n:'Bộ sưu tập',cost:7,d:'Mỗi lá có Enhancement khác nhau: +8 Mult',hand:x=>[0,8*x.enh]}
+,{n:'Đá quý',cost:6,d:'Lá Stone ghi điểm: +25 Chips',card:c=>c.enh=='stone'?[25,0]:0}
+,{n:'Dấu ấn đỏ',cost:7,d:'Lá có Seal ghi điểm: +5 Mult',card:c=>c.seal?[0,5]:0}
+,{n:'Kẻ săn tiền',cost:5,d:'+$1 cuối vòng',end:1}
+,{n:'Nhà giả kim',cost:8,d:'Nếu hand có Wild và Stone: ×2 Mult',hand:x=>x.wild&&x.stone?[0,0,2]:0},{n:'Hack',cost:6,d:'Lá 2–5 ghi điểm được kích hoạt lại',rep:c=>c.r<=5&&c.enh!='stone'?1:0}
+,{n:'Hoàng thân',cost:8,d:'J, Q, K ghi điểm được kích hoạt lại',rep:c=>c.r>=11&&c.r<=13?1:0}
+,{n:'Người gác',cost:7,d:'Lá giữ trên tay được kích hoạt lại',repHeld:c=>1}
+,{n:'Nặng tay',cost:5,d:'Mỗi lá giữ trên tay: +2 Mult',held:c=>[0,2]}
+,{n:'Nữ hoàng giữ',cost:8,d:'Lá Q giữ trên tay: ×1.5 Mult',held:c=>c.r==12?[0,0,1.5]:0}
+,{n:'Thợ rèn',cost:5,d:'Lá Steel giữ trên tay: +10 Chips',held:c=>c.enh=='steel'?[10,0]:0}
+,{n:'Sảnh vàng',cost:8,d:'×3 Mult nếu là Sảnh',hand:x=>x.t=='st'||x.t=='sf'?[0,0,3]:0}
+,{n:'Tam sắc',cost:5,d:'+3 Mult cho mỗi lá ghi điểm',hand:x=>[0,3*x.scored]}
+,{n:'Chip cầm tay',cost:4,d:'+10 Chips cho mỗi lá ghi điểm',hand:x=>[10*x.scored,0]}
+,{n:'Phù thủy',cost:5,d:'Lá Wild ghi điểm: +3 Mult',card:c=>c.enh=='wild'?[0,3]:0}
+,{n:'Kính lúp',cost:5,d:'Lá Glass ghi điểm: +20 Chips',card:c=>c.enh=='glass'?[20,0]:0}
+,{n:'Lá may',cost:5,d:'Lá Lucky ghi điểm: +4 Mult',card:c=>c.enh=='lucky'?[0,4]:0}
+,{n:'Nhịp tim',cost:5,d:'+3 Mult cho mỗi lượt đánh còn lại',hand:x=>[0,3*x.hands]}
+,{n:'Kẻ tích lũy',cost:8,d:'Mỗi lần đánh tay tích thêm ×0.25 Mult (bắt đầu ×1)',hand:(x,j)=>[0,0,1+.25*(j.v||0)],grow:1,gs:j=>'đang ×'+(1+.25*(j.v||0))}
+,{n:'Quỹ đen',cost:6,d:'Cuối vòng: +$1 cho mỗi $10 đang có (tối đa +$5)',end:x=>Math.min(5,Math.floor(x.money/10))}
+,{n:'Đôi tay',cost:6,d:'+4 Mult nếu có Đôi, thêm +4 nếu có Sám cô',hand:x=>x.pair?[0,4+(x.tri?4:0)]:0}
+];
+const JL=[{n:'Thần bài',cost:20,rarity:'legendary',d:'×3 Mult luôn luôn',hand:x=>[0,0,3]},{n:'Bậc tiền bối',cost:20,rarity:'legendary',d:'Lá J, Q, K ghi điểm: ×1.5 Mult',card:c=>c.r>=11&&c.r<=13?[0,0,1.5]:0},{n:'Thợ kim hoàn',cost:20,rarity:'legendary',d:'+$4 cuối mỗi vòng và +30 Mult',hand:x=>[0,30],gold:4}];
+let G;
+const DECKS=[{n:'Bộ lớn',d:'+1 cỡ tay, −1 lượt xả',hs:1,disc:-1},{n:'Bộ nhị sắc',d:'Chỉ có lá ♠ và ♥ (26 lá)',suits:[0,1]},{n:'Bộ đỏ',d:'+1 lượt xả',disc:1},{n:'Bộ xanh',d:'+1 lượt đánh',hands:1},{n:'Bộ đen',d:'+1 ô Joker, −1 lượt đánh',slots:1,hands:-1},{n:'Bộ vàng',d:'Bắt đầu với $10',money:6},{n:'Bộ cân bằng',d:'+1 lượt đánh, +1 lượt xả, −1 cỡ tay',hands:1,disc:1,hs:-1},{n:'Bộ tiết kiệm',d:'Bắt đầu với $14, −1 lượt đánh',money:10,hands:-1},{n:'Bộ trống mặt',d:'Bỏ J, Q, K (40 lá), +1 ô consumable',noFace:1,cons:1},{n:'Bộ lão luyện',d:'Bắt đầu với Cù lũ và Sảnh cấp 2',lvUp:['fh','st']}];
+const BOSSES=[
+ {n:'Cái đá',d:'Chỉ đánh tối đa 4 lá',max:4},
+ {n:'Cái chuông',d:'Lá lẻ và Át không ghi điểm',deb:c=>c.r==14||(c.r<=9&&c.r%2==1)},
+ {n:'Cái răng',d:'Mất $1 mỗi lần đánh',tax:1},
+ {n:'Cái xanh',d:'Lá ♠ không ghi điểm',deb:c=>c.s==0},
+ {n:'Cái hoa',d:'Lá ♣ không ghi điểm',deb:c=>c.s==3},
+ {n:'Cái cối',d:'Lá ♦ không ghi điểm',deb:c=>c.s==2},
+ {n:'Cái đầu',d:'Lá ♥ không ghi điểm',deb:c=>c.s==1},
+ {n:'Cái cột',d:'J, Q, K không ghi điểm',deb:c=>c.r>=11&&c.r<=13},
+ {n:'Cái móc',d:'Mỗi lần đánh, mất 2 lá ngẫu nhiên trên tay',hook:1},
+ {n:'Cái nọc',d:'Chỉ có 1 lượt xả',disc:1},
+ {n:'Cái khóa',d:'Joker ngoài cùng bên phải bị vô hiệu hóa',jokerDeb:1},
+ {n:'Cái gương',d:'Joker ngoài cùng bên trái bị vô hiệu hóa',jokerLeftDeb:1},
+ {n:'Cái khuôn',d:'Chỉ được đánh đúng 5 lá',exact:5},
+ {n:'Cái màn',d:'Chỉ được đánh đúng 1 lá',exact:1},
+ {n:'Cái nợ',d:'Mất $2 mỗi lần đánh',tax:2},
+ {n:'Cái hộp',d:'Không nhận tiền lãi cuối vòng',noInterest:1},
+ {n:'Cái câm',d:'Không được xả bài',disc:0},
+ {n:'Cái kim',d:'Không được đánh Đôi',ban:['p1']},
+ {n:'Cái lưỡi',d:'Không được đánh Bài cao',ban:['hc']},
+ {n:'Cái cân',d:'Chips gốc của mỗi lá giảm một nửa',half:1},
+ {n:'Cái ảo ảnh',d:'Joker ở giữa bị vô hiệu hóa',jokerMidDeb:1},
+ {n:'Cái tay nhỏ',d:'Cỡ tay −2',hsd:-2},
+ {n:'Cái ví',d:'Không có tiền thưởng vòng này',noReward:1},
+ {n:'Cái lỗ',d:'Bộ bài bị mất 10 lá ngẫu nhiên',cut:10},
+ {n:'Cái sương mù',d:'Khoảng 1/3 bộ bài bị vô hiệu hóa',deb:c=>c.id%3==0}
+];
+const T=[{n:'Kính',d:'1 lá chọn: ×2 Mult nhưng có thể vỡ (25%)',enh:'glass',max:1},{n:'Vàng',d:'1 lá chọn: +$3 nếu giữ trên tay cuối vòng',enh:'gold',max:1},{n:'Dấu đỏ',d:'1 lá chọn: kích hoạt lại khi ghi điểm',seal:'red',max:1},{n:'Sức mạnh',d:'Tăng 1 bậc cho ≤2 lá chọn',up:1,max:2},{n:'Hoàng hậu',d:'1 lá chọn: ×1.5 Mult khi ghi điểm',enh:'x',max:1},{n:'Công lý',d:'Nhận ngay $6',cash:6},{n:'Mặt trời',d:'Đổi ≤3 lá chọn thành ♥',s:1},{n:'Mặt trăng',d:'Đổi ≤3 lá chọn thành ♣',s:3},{n:'Ngôi sao',d:'Đổi ≤3 lá chọn thành ♦',s:2},{n:'Thế giới',d:'Đổi ≤3 lá chọn thành ♠',s:0},{n:'Pháp sư',d:'1 lá chọn: +30 Chips khi ghi điểm',enh:'chip',max:1},{n:'Nữ tư tế',d:'1 lá chọn: +4 Mult khi ghi điểm',enh:'mult',max:1},{n:'Hành quyết',d:'Xóa ≤2 lá chọn khỏi bộ bài',kill:1,max:2},{n:'Ẩn sĩ',d:'Nhân đôi tiền (tối đa +$20)',gold:1},{n:'Đá',d:'Lá chọn thành Stone: +50 Chips, không có chất',enh:'stone',max:1},{n:'Hoang dã',d:'Lá chọn có thể thuộc mọi chất',enh:'wild',max:1},{n:'May mắn',d:'Lá chọn: 20% +20 Mult, 10% nhận $1',enh:'lucky',max:1},{n:'Thưởng',d:'Lá chọn: +30 Chips khi ghi điểm',enh:'bonus',max:1},{n:'Bánh xe vận mệnh',d:'Gắn Foil/Holo/Poly lên 1 Joker ngẫu nhiên chưa có Edition (xác suất 50%)',fn:()=>{if(Math.random()<.5){const a=G.jokers.filter(j=>!j.ed);if(a.length){const j=a[Math.random()*a.length|0];j.ed=['foil','holo','poly'][Math.random()*3|0];j.d+=' ('+{foil:'+50 Chips',holo:'+10 Mult',poly:'×1.5 Mult'}[j.ed]+')'}else G.msg='Không có Joker nào để gắn Edition'}else G.msg='Bánh xe: không may mắn lần này'}}
+,{n:'Tiết chế',d:'Nhận tiền bằng tổng giá bán các Joker (tối đa $50)',fn:()=>{G.money+=Math.min(50,G.jokers.reduce((n,j)=>n+Math.floor(j.cost/2),0))}}
+,{n:'Hoàng đế',d:'Tạo tối đa 2 Tarot ngẫu nhiên',fn:()=>{for(let i=0;i<2;i++)if(G.cons.length<G.consMax+1)G.cons.push(T[Math.random()*T.length|0])}}
+,{n:'Người tình',d:'Tối đa 2 lá chọn thành Wild',enh:'wild',max:2}
+,{n:'Giáo hoàng',d:'Tối đa 2 lá chọn nhận +4 Mult khi ghi điểm',enh:'mult',max:2}
+,{n:'Người treo',d:'Xóa tối đa 2 lá chọn khỏi bộ bài',kill:1,max:2}
+,{n:'Cỗ xe',d:'Tối đa 2 lá chọn thành Steel',enh:'steel',max:2}
+,{n:'Quỷ dữ',d:'Tối đa 2 lá chọn thành Gold',enh:'gold',max:2}
+,{n:'Tòa tháp',d:'Tối đa 2 lá chọn thành Stone',enh:'stone',max:2}
+,{n:'Cái chết',d:'Sao chép Enhancement và Seal từ lá đầu sang lá thứ hai',copyCard:1,max:2}
+];
+const VO=[{n:'Tay lớn',d:'+1 cỡ tay (9 lá)',k:'hs'},{n:'Thêm lượt đánh',d:'+1 lượt đánh mỗi vòng',k:'h'},{n:'Thêm lượt xả',d:'+1 lượt xả mỗi vòng',k:'d'},{n:'Hội viên',d:'Joker trong shop giảm $1',k:'shop',v:1},{n:'Thẻ giảm giá',d:'Mọi vật phẩm shop giảm $1',k:'discount',v:1},{n:'Hộp lớn',d:'Mỗi pack thêm 1 lựa chọn',k:'pack',v:1},{n:'Kho chứa',d:'Thêm 1 ô consumable',k:'cons',v:1},{n:'Phiếu miễn phí',d:'Mỗi cửa hàng có 1 lần reroll miễn phí',k:'freeReroll',v:1},{n:'Két sắt',d:'Tăng giới hạn lãi tối đa lên $10',k:'interest',v:1},{n:'Quỹ tiết kiệm',d:'+$2 cuối mỗi vòng',k:'fund',v:1},{n:'Ô Joker',d:'+1 ô Joker',k:'jslot',v:1},{n:'Mã giảm reroll',d:'Giá reroll khởi điểm chỉ còn $3',k:'rrDisc',v:1},{n:'Quầy hàng lớn',d:'Cửa hàng bày thêm 1 Joker',k:'jshop',v:1}];
+const bossNow=()=>G.bosses[(G.ante-1)%G.bosses.length];
+const debuffed=c=>!!(G.boss&&G.boss.deb&&G.boss.deb(c));
+const jokerDisabled=j=>!!(G.boss&&((G.boss.jokerDeb&&G.jokers[G.jokers.length-1]===j)||(G.boss.jokerLeftDeb&&G.jokers[0]===j)||(G.boss.jokerMidDeb&&G.jokers[Math.floor(G.jokers.length/2)]===j)));
+const stakeName=s=>['Thường','Đỏ','Cam','Vàng'][s-1]||'Vô hạn';
+function burst(text,kind=''){
+ const el=document.createElement('span');el.className='float '+kind;el.textContent=text;
+ el.style.left=(35+Math.random()*30)+'%';el.style.top=(35+Math.random()*25)+'%';
+ $('#fx').appendChild(el);setTimeout(()=>el.remove(),950);
+}
+const ED={foil:'Foil',holo:'Holo',poly:'Poly'},mk=j=>{const o={...j};o.rarity=o.rarity||((o.cost>=9&&Math.random()<.35)?'rare':(Math.random()<.25?'uncommon':'common'));if(G&&G.stake>=2&&Math.random()<.15)o.rental=1;if(G&&G.stake>=3&&Math.random()<.2){o.perishable=1;o.pLeft=5}if(Math.random()<.2){o.ed=['foil','holo','poly'][Math.random()*3|0];o.cost+=2;o.d+=' ('+{foil:'+50 Chips',holo:'+10 Mult',poly:'×1.5 Mult'}[o.ed]+')'}return o};
+const SP=[{n:'Bùa vàng',d:'1 lá chọn: Dấu vàng (+$3 khi ghi điểm)',seal:'gold',max:1},{n:'Bùa xanh',d:'1 lá chọn: Dấu xanh (giữ cuối vòng: nâng cấp tổ hợp vừa đánh)',seal:'blue',max:1},{n:'Bùa tím',d:'1 lá chọn: Dấu tím (xả lá này nhận 1 Tarot)',seal:'purple',max:1},{n:'Bùa thép',d:'1 lá chọn: Thép (×1.5 Mult khi giữ trên tay)',enh:'steel',max:1},{n:'Hố đen',d:'Nâng cấp mọi tổ hợp +1',fn:()=>Object.keys(HT).forEach(k=>G.lv[k]++)},{n:'Ngoại chất',d:'Gắn Poly lên 1 Joker ngẫu nhiên',fn:()=>{const a=G.jokers.filter(j=>!j.ed);if(a.length){const j=a[Math.random()*a.length|0];j.ed='poly';j.d+=' (×1.5 Mult)'}}},{n:'Thiêu đốt',d:'Hủy 3 lá ngẫu nhiên trên tay, nhận $20',fn:()=>{shuffle(G.hand.slice()).slice(0,3).forEach(c=>{G.dead.add(c.id);G.hand.splice(G.hand.indexOf(c),1)});G.money+=20}},{n:'Dấu ấn',d:'Đổi toàn bộ lá trên tay thành 1 chất ngẫu nhiên',fn:()=>{const s=Math.random()*4|0;G.hand.forEach(c=>{G.mods[c.id]=G.mods[c.id]||{};G.mods[c.id].s=c.s=s})}},{n:'Linh hồn',d:'Tạo 1 Joker Huyền thoại (cần ô trống)',fn:()=>{if(G.jokers.length<G.slots){const o=JL.filter(j=>!G.jokers.some(q=>q.n==j.n));if(o.length)G.jokers.push(mk(o[Math.random()*o.length|0]))}}},{n:'Bùa đỏ',d:'1 lá chọn: Dấu đỏ (kích hoạt lại)',seal:'red',max:1},{n:'Nhân bản',d:'Sao chép 1 Joker ngẫu nhiên nếu còn ô',fn:()=>{if(G.jokers.length&&G.jokers.length<G.slots){const j=G.jokers[Math.random()*G.jokers.length|0];G.jokers.push({...j,v:0})}}},{n:'Cầu nguyện',d:'Nâng cấp 3 tổ hợp ngẫu nhiên +1',fn:()=>{const k=Object.keys(HT);for(let i=0;i<3;i++)G.lv[k[Math.random()*k.length|0]]++}},{n:'Ngoại chất tối',d:'Gắn Holo lên 1 Joker ngẫu nhiên, −1 cỡ tay vĩnh viễn',fn:()=>{const a=G.jokers.filter(j=>!j.ed);if(a.length){const j=a[Math.random()*a.length|0];j.ed='holo';j.d+=' (+10 Mult)';G.vo.hs=(G.vo.hs||0)-1}}},{n:'Thống trị',d:'Nâng cấp một tổ hợp ngẫu nhiên lên 3 cấp',fn:()=>{const k=Object.keys(HT)[Math.random()*Object.keys(HT).length|0];G.lv[k]+=3}},{n:'Lời nguyền',d:'Xóa một Joker ngẫu nhiên, nhận $25',fn:()=>{if(G.jokers.length){G.jokers.splice(Math.random()*G.jokers.length|0,1);G.money+=25}}}];
+const ACH={win:'Thắng ván đầu tiên',s4:'Thắng ở độ khó 4',duo:'Thắng bằng Bộ nhị sắc',m:'Một triệu điểm trong một lần đánh',ed:'Có 3 Joker mang Edition cùng lúc'};
+function ach(k){try{const a=JSON.parse(localStorage.getItem('bja')||'{}');if(!a[k]){a[k]=1;localStorage.setItem('bja',JSON.stringify(a));G.tagmsg=G.msg='Thành tựu: '+ACH[k]}}catch(e){}}
+function achTxt(){let a={};try{a=JSON.parse(localStorage.getItem('bja')||'{}')}catch(e){}return Object.keys(ACH).map(k=>(a[k]?'✔ ':'✘ ')+ACH[k]).join('<br>')}
+const TAGS=[{n:'Tag tiền',d:'+$7',f:()=>{G.money+=7}},{n:'Tag Hành tinh',d:'nâng cấp 1 tổ hợp ngẫu nhiên',f:()=>{G.lv[Object.keys(HT)[Math.random()*Object.keys(HT).length|0]]++}},{n:'Tag Joker',d:'1 Joker ngẫu nhiên nếu còn ô',f:()=>{if(G.jokers.length<G.slots){const o=J.filter(j=>!G.jokers.some(q=>q.n==j.n));if(o.length)G.jokers.push(mk(o[Math.random()*o.length|0]))}}},{n:'Tag Tarot',d:'1 Tarot nếu còn chỗ',f:()=>{if(G.cons.length<G.consMax)G.cons.push(T[Math.random()*T.length|0])}},{n:'Tag Pack',d:'Nhận 1 pack miễn phí ở shop',f:()=>{G.freePack=1}},{n:'Tag Coupon',d:'Reroll kế tiếp miễn phí',f:()=>{G.freeReroll=1}},{n:'Tag Double',d:'Nhân đôi tiền hiện có, tối đa +$20',f:()=>{G.money+=Math.min(20,G.money)}}];
+function skipB(){const tg=TAGS[Math.random()*TAGS.length|0];tg.f();G.tagmsg='Nhận '+tg.n+' ('+tg.d+')';nextBlind()}
+const rmSave=()=>{try{localStorage.removeItem('bj1')}catch(e){}},hasSave=()=>{try{return !!localStorage.getItem('bj1')}catch(e){return false}};
+function save(){try{localStorage.setItem('bj1',JSON.stringify({a:G.ante,r:G.rd,m:G.money,j:G.jokers.map(j=>[j.n,j.v,j.ed,j.d,j.cost,j.rarity,j.rental,j.perishable,j.pLeft]),lv:G.lv,c:G.cons.map(t=>t.n),mods:G.mods,dead:[...G.dead],vo:G.vo,bs:G.bosses.map(b=>b.n),dk:DECKS.indexOf(G.dk),sl:G.slots,en:G.endless,st:G.stake,sa:G.stakeApplied,freePack:G.freePack,freeReroll:G.freeReroll,consMax:G.consMax}))}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem('bj1')),f=(a,n)=>a.find(x=>x.n==n);const jk=(n,v,ed,d,cost,rarity,rental,perishable,pLeft)=>{const o={...f(J.concat(JL),n),v,ed,rarity:rarity||((f(J.concat(JL),n).cost>=9)?'rare':'common'),rental,perishable,pLeft:pLeft||5};if(d)o.d=d;if(cost)o.cost=cost;return o};
+ G={ante:s.a,rd:s.r,money:s.m,jokers:s.j.map(q=>jk(...q)),lv:s.lv,phase:'blind',sel:new Set(),msg:'',busy:false,cons:s.c.map(n=>f(T,n)||f(SP,n)),consMax:s.consMax||2,mods:s.mods,dead:new Set(s.dead),vo:Object.assign({hs:0,h:0,d:0,shop:0,discount:0,pack:0,cons:0,freeReroll:0,interest:0},s.vo),bosses:s.bs.map(n=>f(BOSSES,n)),dk:DECKS[s.dk],slots:s.sl,endless:s.en,packs:[],stake:s.st||1,stakeApplied:!!s.sa,freePack:s.freePack,freeReroll:s.freeReroll};return true}catch(e){return false}}
+function stat(w){try{const s=JSON.parse(localStorage.getItem('bjs')||'{}');s.runs=(s.runs||0)+1;s.best=Math.max(s.best||0,G.ante);if(w){s.wins=(s.wins||0)+1;ach('win');if(G.stake==4)ach('s4');if(G.dk&&G.dk.n=='Bộ nhị sắc')ach('duo')}localStorage.setItem('bjs',JSON.stringify(s))}catch(e){}}
+function statTxt(){try{const s=JSON.parse(localStorage.getItem('bjs')||'{}');return s.runs?`Đã chơi ${s.runs} ván, thắng ${s.wins||0}, ante cao nhất ${s.best}`:''}catch(e){return ''}}
+function col(){$('#modal').innerHTML=`<div class="modal"><div class="mb"><h2>Thành tựu</h2><p>${achTxt()}</p><h2>Danh sách Joker (${J.length})</h2><table>${J.concat(JL).map(j=>`<tr><td>${j.n}</td><td>$${j.cost}</td><td>${j.d}</td></tr>`).join('')}</table><div class="row" style="margin-top:12px"><button class="b-blue" id="cx">Đóng</button></div></div></div>`;$('#cx').onclick=()=>$('#modal').innerHTML=''}
+const AC=window.AudioContext||window.webkitAudioContext;let ac,mute=false;
+function snd(f,d=.08,ty='square'){if(mute||!AC)return;try{ac=ac||new AC();const o=ac.createOscillator(),g=ac.createGain();o.type=ty;o.frequency.value=f;g.gain.value=.05;o.connect(g);g.connect(ac.destination);o.start();g.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.stop(ac.currentTime+d)}catch(e){}}
+const TB=a=>TARGET[a-1]||Math.round(TARGET[7]*Math.pow(2.2,a-8)),PN={j:'Joker',t:'Tarot',s:'Spectral',p:'Hành tinh'};
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.random()*(i+1)|0;[a[i],a[j]]=[a[j],a[i]]}return a}
+function newGame(){
+ G={ante:1,rd:0,money:4,jokers:[],lv:Object.fromEntries(Object.keys(HT).map(k=>[k,1])),phase:'deck',sel:new Set(),msg:'',busy:false,cons:[],consMax:2,mods:{},dead:new Set(),vo:{hs:0,h:0,d:0,shop:0,discount:0,pack:0,cons:0,freeReroll:0,interest:0},bosses:shuffle(BOSSES.slice()),dk:null,slots:5,endless:false,packs:[],stake:G&&G.stake||1,stakeApplied:false,freePack:0,freeReroll:0};
+ render();
+}
+function freshDeck(){let d=[],id=0;for(let s=0;s<4;s++)for(let r=2;r<=14;r++){const m=G.mods[id];if(!G.dead.has(id)&&(!G.dk.suits||G.dk.suits.includes(s))&&(!G.dk.noFace||r<11||r==14))d.push({id,r,s,...m});id++}return shuffle(d)}
+function target(){return Math.round(TB(G.ante)*BL[G.rd].k*(1+.25*(G.stake-1)))}
+function startBlind(){
+ if(!G.stakeApplied){if(G.stake==2)G.money=Math.max(0,G.money-1);if(G.stake==3)G.money=Math.max(0,G.money-2);G.stakeApplied=true}
+ G.deck=freshDeck();G.hand=[];G.score=0;G.boss=BL[G.rd].c=='boss'?bossNow():null;const D=G.dk;G.hands=4+(D.hands||0)+G.vo.h+G.jokers.filter(j=>j.hh).length-(G.boss?1:0);G.disc=Math.min(3+(D.disc||0)+G.vo.d-(G.stake>=3?1:0),G.boss&&G.boss.disc!=null?G.boss.disc:99);if(G.boss&&G.boss.disc===0)G.disc=0;G.hs=Math.max(1,8+G.vo.hs+(G.dk.hs||0)+(G.boss&&G.boss.hsd||0)+G.jokers.filter(j=>j.hsz).length);G.sel=new Set();G.msg='';G.last=null;G.phase='play';G.tagmsg='';if(G.boss&&G.boss.cut)G.deck.splice(0,G.boss.cut);draw();render();
+}
+function draw(){while(G.hand.length<G.hs&&G.deck.length)G.hand.push(G.deck.pop());sortHand(G.sortBy||'r')}
+function sortHand(by){G.sortBy=by;G.hand.sort((a,b)=>by=='r'?b.r-a.r||a.s-b.s:a.s-b.s||b.r-a.r)}
+function ev(cs){
+ const active=cs.filter(c=>c.enh!='stone'),n=active.length,cnt={};active.forEach(c=>cnt[c.r]=(cnt[c.r]||0)+1);
+ const g=Object.entries(cnt).map(([r,k])=>({r:+r,k})).sort((a,b)=>b.k-a.k||b.r-a.r);
+ const FF=G.jokers.some(j=>j.four),SC=G.jokers.some(j=>j.gap),need=FF?4:5;
+ const isF=s=>s.length>=need&&s.every(c=>c.enh!='stone'&&(c.enh=='wild'||s[0].enh=='wild'||c.s==s[0].s));
+ const isS=s=>{const r=[...new Set(s.map(c=>c.r))].sort((a,b)=>a-b);if(r.length!=s.length||s.length<need)return false;const q=a=>a.every((v,i)=>!i||v-a[i-1]<=(SC?2:1));return q(r)||(r[r.length-1]==14&&q([1,...r.slice(0,-1)]))};
+ const sets=FF&&n==5?[active,...active.map((_,i)=>active.filter((_,j)=>j!=i))]:[active];
+ const fl=sets.find(isF),st=sets.find(isS),sf=sets.find(s=>isF(s)&&isS(s));
+ const rs=Object.keys(cnt).map(Number).sort((a,b)=>a-b);
+ const take=k=>active.filter(c=>g.filter(x=>x.k>=k).some(x=>x.r==c.r));
+ let t,sc;
+ if(sf){t='sf';sc=sf}else if(fl&&g[0]&&g[0].k==3&&g[1]&&g[1].k==2){t='flh';sc=fl}else if(g[0]&&g[0].k==5){t='five';sc=active}else if(g[0]&&g[0].k==4){t='f4';sc=take(4)}else if(g[0]&&g[0].k==3&&g[1]&&g[1].k==2){t='fh';sc=active}
+ else if(fl){t='fl';sc=fl}else if(st){t='st';sc=st}else if(g[0]&&g[0].k==3){t='t3';sc=take(3)}
+ else if(g[0]&&g[0].k==2&&g[1]&&g[1].k==2){t='p2';sc=take(2)}else if(g[0]&&g[0].k==2){t='p1';sc=take(2)}
+ else{t='hc';sc=active.length?[active.reduce((a,b)=>b.r>a.r?b:a)]:[]}
+ return{t,sc:sc.concat(cs.filter(c=>c.enh=='stone')),pair:g[0]&&g[0].k>=2,tri:g[0]&&g[0].k>=3}
+}
+function lvStats(t){const h=HT[t],l=G.lv[t]-1;return[h[1]+h[3]*l,h[2]+h[4]*l]}
+function addEffect(state,result,label,id,tr){
+ if(!result)return;
+ state.ch+=result[0]||0;
+ state.mu+=result[1]||0;
+ if(result[2])state.mu*=result[2];
+ if(label)tr.push({id:id||-1,l:label,ch:state.ch,mu:state.mu});
+}
+function jokerEd(j,state,tr,when){
+ if(when=='pre'){if(j.ed=='foil')addEffect(state,[50,0],'Foil',-1,tr);if(j.ed=='holo')addEffect(state,[0,10],'Holo',-1,tr)}
+ else if(j.ed=='poly')addEffect(state,[0,0,1.5],'Poly',-1,tr);
+}
+function triggerJokers(stage,payload,state,tr){
+ G.jokers.forEach(j=>{
+  if(jokerDisabled(j))return;
+  let result;
+  if(stage=='card'&&j.card)result=j.card(payload,j);
+  if(stage=='held'&&j.held)result=j.held(payload,j);
+  if(result)addEffect(state,result,j.n,payload&&payload.id,tr);
+ });
+}
+function retriggers(c,ci,scoring){
+ let n=c.seal=='red'?1:0;
+ G.jokers.forEach(j=>{if(jokerDisabled(j))return;if(j.repeat&&scoring&&ci===0)n+=j.repeat;if(j.rep&&scoring)n+=j.rep(c,ci)||0;if(j.repHeld&&!scoring)n+=j.repHeld(c)||0});
+ return n;
+}
+function calc(cs,commit=false){
+ const e=ev(cs);let[ch,mu]=lvStats(e.t);
+ const tr=[{l:HT[e.t][0]+' cấp '+G.lv[e.t],ch,mu}];
+ const x={t:e.t,last:G.hands==1,n:cs.length,pair:e.pair,tri:e.tri,disc:G.disc,jn:G.jokers.length,money:G.money,suits:new Set(cs.filter(c=>c.enh!='stone').map(c=>c.enh=='wild'?'wild':c.s)).size,enh:new Set(cs.map(c=>c.enh).filter(Boolean)).size,wild:cs.some(c=>c.enh=='wild'),stone:cs.some(c=>c.enh=='stone'),scored:e.sc.length,held:G.hand.filter(c=>!cs.includes(c)).length,hands:G.hands-(commit?1:0)};
+ const state={ch,mu};
+ /* 1) Lá ghi điểm: chip gốc -> enhancement -> seal -> joker "on scored"; retrigger lặp lại toàn bộ chuỗi */
+ e.sc.forEach((c,ci)=>{
+  if(debuffed(c))return;
+  const reps=retriggers(c,ci,true);
+  for(let k=0;k<=reps;k++){
+   state.ch+=c.enh=='stone'?50:(G.boss&&G.boss.half?Math.ceil(cv(c.r)/2):cv(c.r));
+   if(c.enh=='chip'||c.enh=='bonus')state.ch+=30;
+   if(c.enh=='mult')state.mu+=4;
+   if(c.enh=='glass')state.mu*=2;
+   if(c.enh=='x')state.mu*=1.5;
+   if(commit&&c.enh=='lucky'){if(Math.random()<.2){state.mu+=20;tr.push({id:c.id,l:'May mắn +20 Mult',ch:state.ch,mu:state.mu})}if(Math.random()<.1){G.money++;tr.push({id:c.id,l:'May mắn +$1',ch:state.ch,mu:state.mu})}}
+   if(commit&&c.seal=='gold'){G.money+=3}
+   tr.push({id:c.id,l:(c.enh=='stone'?'Stone':(RN[c.r]||c.r)+SU[c.s])+(k?' ↻':''),ch:state.ch,mu:state.mu});
+   triggerJokers('card',c,state,tr);
+  }
+ });
+ /* 2) Lá giữ trên tay (Steel, Joker "in hand"); Red Seal cũng retrigger lá giữ trên tay */
+ G.hand.forEach((c,hi)=>{
+  if(debuffed(c)||cs.includes(c)||c.enh=='stone')return;
+  const reps=retriggers(c,hi,false);
+  for(let k=0;k<=reps;k++){
+   if(c.enh=='steel'){state.mu*=1.5;tr.push({id:c.id,l:'Thép'+(k?' ↻':''),ch:state.ch,mu:state.mu})}
+   triggerJokers('held',c,state,tr);
+  }
+ });
+ /* 3) Joker từ trái sang phải: Foil/Holo -> hiệu ứng Joker -> Poly */
+ G.jokers.forEach(j=>{
+  if(jokerDisabled(j))return;
+  jokerEd(j,state,tr,'pre');
+  if(j.hand)addEffect(state,j.hand(x,j),j.n,-1,tr);
+  jokerEd(j,state,tr,'post');
+ });
+ return{e,tr,ch:state.ch,mu:state.mu,total:Math.round(state.ch*state.mu)}
+}
+function toggle(id){
+ if(G.busy)return;
+ snd(G.sel.has(id)?300:520,.05);if(G.sel.has(id))G.sel.delete(id);else if(G.sel.size<(G.boss&&G.boss.max||5))G.sel.add(id);
+ render();
+}
+function play(){
+ const cs=G.hand.filter(c=>G.sel.has(c.id));if(!cs.length||G.busy)return;
+ if(G.boss&&G.boss.exact&&cs.length!==G.boss.exact){G.msg='Boss yêu cầu đánh đúng '+G.boss.exact+' lá';render();return}
+ {const bt=ev(cs).t;if(G.boss&&G.boss.ban&&G.boss.ban.includes(bt)){G.msg='Boss cấm đánh '+HT[bt][0];render();return}}
+ const r=calc(cs,true);if(r.total>=1000000)ach('m');G.busy=true;G.hands--;G.last=r;r.e.sc.forEach(c=>{if(!debuffed(c)&&c.enh=='glass'&&Math.random()<.25){G.dead.add(c.id);burst('KÍNH VỠ','red')}});G.played=cs;G.step=null;G.jokers.forEach(j=>{if(j.grow)j.v=(j.v||0)+1});r.tr.forEach((s,i)=>setTimeout(()=>{G.step=s;snd(330+i*60,.12);burst(s.l,s.l=='Foil'||s.l=='Holo'||s.l=='Poly'?'blue':'');render()},350*(i+1)));setTimeout(()=>{G.score+=r.total;burst('+'+r.total.toLocaleString(),'big');G.played=null;G.step=null;render()},350*(r.tr.length+1));
+ G.msg=HT[r.e.t][0]+'! +'+r.total.toLocaleString();if(G.boss&&G.boss.tax)G.money=Math.max(0,G.money-G.boss.tax);if(G.boss&&G.boss.hook){const rest=G.hand.filter(c=>!G.sel.has(c.id));shuffle(rest).slice(0,2).forEach(c=>G.hand.splice(G.hand.indexOf(c),1))}
+ G.hand=G.hand.filter(c=>!G.sel.has(c.id));G.sel=new Set();render();
+ setTimeout(()=>{
+  G.busy=false;
+  if(G.score>=target())return win();
+  if(G.hands<=0){G.phase='over';stat(0);rmSave();snd(120,.5,'sawtooth');return render()}
+  draw();render();
+ },350*(G.last.tr.length+1)+900);
+}
+function discard(){
+ if(G.disc<=0||!G.sel.size||G.busy)return;
+ G.disc--;const x={n:G.sel.size,disc:G.disc,jn:G.jokers.length};G.hand.filter(c=>G.sel.has(c.id)&&c.seal=='purple').forEach(()=>{if(G.cons.length<G.consMax)G.cons.push(T[Math.random()*T.length|0])});G.jokers.forEach(j=>{if(j.dm)G.money+=j.dm;if(j.discard){const r=j.discard(x,j);if(r){G.msg=(j.n+' '+(r[1]?'+'+r[1]+' Mult':'+'+r[0]+' Chips'));burst(G.msg,'blue')}}});G.hand=G.hand.filter(c=>!G.sel.has(c.id));G.sel=new Set();G.last=null;G.msg=G.msg||'';draw();render();
+}
+function win(){
+ const b=BL[G.rd],int=G.boss&&G.boss.noInterest?0:Math.min(G.vo.interest?10:5,Math.floor(G.money/5)),gold=(G.vo.fund?2:0)+G.jokers.reduce((s,j)=>s+(j.gold||0),0)+3*G.hand.filter(c=>c.enh=='gold'||c.seal=='gold').length;
+ const endBonus=G.jokers.reduce((s,j)=>s+(typeof j.end=='function'?j.end({jn:G.jokers.length,money:G.money})||0:(j.end||0)),0),rental=G.jokers.filter(j=>j.rental).length*3,gain=(G.boss&&G.boss.noReward?0:b.r)+G.hands+int+gold+endBonus-rental;G.money=Math.max(0,G.money+gain);G.hand.filter(c=>c.seal=='blue').forEach(()=>{if(G.last)G.lv[G.last.e.t]++});
+ G.jokers=G.jokers.filter(j=>{if(!j.perishable)return true;j.pLeft=(j.pLeft||5)-1;if(j.pLeft<=0){burst(j.n+' hết hạn','red');return false}return true});
+ G.gain={base:b.r,hands:G.hands,int,gold,end:endBonus,sum:gain};
+ if(G.rd==2&&G.ante==8&&!G.endless){G.phase='won';stat(1);rmSave();return render()}
+ snd(660,.3,'triangle');G.phase='cash';render();
+}
+function openShop(){
+ G.rr=G.vo.rrDisc?3:5;G.freeReroll=G.vo.freeReroll?1:0;G.phase='shop';rollShop();render();
+}
+function rollShop(){
+ const owned=G.jokers.map(j=>j.n);
+ G.shop=shuffle(J.filter(j=>!owned.includes(j.n))).slice(0,3+(G.vo.jshop||0)).map(mk);
+ G.planets=shuffle(Object.keys(HT)).slice(0,2);G.packs=shuffle([{k:'j',n:3,cost:4,label:'Joker'},{k:'t',n:3,cost:4,label:'Tarot'},{k:'p',n:3,cost:4,label:'Hành tinh'},{k:'s',n:3,cost:4,label:'Spectral'},{k:'j',n:5,cost:6,label:'Mega Joker'},{k:'t',n:5,cost:6,label:'Mega Tarot'}]).slice(0,2);if(G.freePack){G.packs[0].cost=0;G.packs[0].free=1;G.freePack=0}G.packs.forEach(p=>p.n+=G.vo.pack||0);G.tarots=shuffle(T.slice()).slice(0,2);const vl=VO.filter(v=>!G.vo[v.k]);G.voc=vl.length?vl[Math.random()*vl.length|0]:null;
+}
+function price(n,kind){return Math.max(0,n+(G.stake>=4?1:0)-(kind=='joker'?G.vo.shop||0:0)-(G.vo.discount||0))}
+function buyJ(i){const j=G.shop[i],cost=price(j.cost+(j.rental?1:0),'joker');if(G.money<cost||G.jokers.length>=G.slots)return;G.money-=cost;snd(880,.1);G.jokers.push(j);if(G.jokers.filter(q=>q.ed).length>=3)ach('ed');G.shop.splice(i,1);render()}
+function buyP(i){const cost=price(3);if(G.money<cost)return;G.money-=cost;G.lv[G.planets[i]]++;G.planets.splice(i,1);render()}
+function sell(i){G.money+=Math.floor(G.jokers[i].cost/2);G.jokers.splice(i,1);render()}
+function moveJoker(i,delta){const to=i+delta;if(to<0||to>=G.jokers.length)return;[G.jokers[i],G.jokers[to]]=[G.jokers[to],G.jokers[i]];snd(500,.05);render()}
+function reroll(){if(!G.freeReroll&&G.money<G.rr)return;if(G.freeReroll)G.freeReroll=0;else G.money-=G.rr;G.rr++;rollShop();render()}
+function nextBlind(){
+ if(G.rd==2){G.rd=0;G.ante++}else G.rd++;G.phase='blind';render();
+}
+function cardHTML(c){const red=c.s==1||c.s==2,badge=c.enh?({glass:'KÍNH',gold:'VÀNG',steel:'THÉP',chip:'+CHIP',mult:'+MULT',x:'×MULT',bonus:'+30 CHIP',lucky:'MAY MẮN',wild:'WILD',stone:'STONE'}[c.enh]||''):c.seal?c.seal.toUpperCase():'';const detail=[RN[c.r]||c.r,c.enh&&c.enh.toUpperCase(),c.seal&&c.seal.toUpperCase(),SU[c.s]].filter(Boolean).join(' ');return `<div class="card ${red?'r':''} ${c.enh?'e-'+c.enh:''} ${c.seal?'s-'+c.seal:''} ${debuffed(c)?'debuff':''} ${G.sel.has(c.id)?'sel':''}" role="button" tabindex="0" aria-pressed="${G.sel.has(c.id)}" aria-label="${detail}" title="${detail}" data-id="${c.id}" data-badge="${badge}"><span>${RN[c.r]||c.r}</span><span class="s">${SU[c.s]}</span><span style="text-align:right">${RN[c.r]||c.r}</span></div>`}
+function jokerHTML(j,i,shop){const ed=j.ed?` ✦${ED[j.ed]}`:'',cost=shop?price(j.cost+(j.rental?1:0),'joker'):j.cost+(j.rental?1:0),rar=j.rarity||'common',disabled=!shop&&jokerDisabled(j),state=j.rental?' RENTAL −$3/vòng':j.perishable?` PERISHABLE (${j.pLeft||5} vòng)`:'' ,sell=Math.floor((j.cost+(j.rental?1:0))/2);return `<div class="joker rarity-${rar} ${disabled?'debuff':''}" title="${disabled?'Bị Boss vô hiệu hóa':RARITY[rar]}"><b>${j.n}${ed}</b><small>${disabled?'VÔ HIỆU HÓA':RARITY[rar]}${state}</small><p>${j.d}${j.grow?` (${j.gs?j.gs(j):'đang +'+2*(j.v||0)})`:''}</p>${shop?`<button class="b-gold" data-buy="${i}" ${G.money<cost||G.jokers.length>=G.slots?'disabled':''}>$${cost}</button>`:`<button class="b-grey" data-sell="${i}">Bán $${sell}</button><div class="row" style="gap:3px;margin-top:4px"><button class="b-grey" style="padding:2px 7px" data-jleft="${i}" ${i?'':'disabled'} aria-label="Đưa Joker sang trái">◀</button><button class="b-grey" style="padding:2px 7px" data-jright="${i}" ${i<G.jokers.length-1?'':'disabled'} aria-label="Đưa Joker sang phải">▶</button></div>`}</div>`}
+function side(){
+ const b=BL[G.rd];
+ let pv=`<small>Chọn tối đa ${G.boss&&G.boss.max||5} lá</small>`;
+ if(G.phase=='play'){
+  const cs=G.hand.filter(c=>G.sel.has(c.id));
+  const r=cs.length?calc(cs):G.last;
+  if(r)pv=`<div class="hn">${HT[r.e.t][0]} <small style="display:inline">cấp ${G.lv[r.e.t]}</small></div><div class="cm"><span class="c">${r.ch}</span>×<span class="m">${r.mu}</span></div>`;
+ }
+ return `<div class="side"><div class="blind ${b.c}">${b.n}</div>${G.boss&&G.phase=='play'?`<div class="box" style="font-family:system-ui;font-size:.8rem">${G.boss.n}: ${G.boss.d}</div>`:''}
+ <div class="box"><small>Điểm mục tiêu</small><div class="score" style="color:var(--gold)">${target().toLocaleString()}</div></div>
+ <div class="box"><small>Điểm hiện tại</small><div class="score">${(G.score||0).toLocaleString()}</div></div>
+ <div class="box prev">${G.step?`<div class="hn">${G.step.l}</div><div class="cm"><span class="c">${G.step.ch}</span>×<span class="m">${Math.round(G.step.mu*10)/10}</span></div>`:pv}</div>
+ <div class="grid2"><div class="box"><small>Lượt đánh</small><span style="color:var(--blue)">${G.hands??'-'}</span></div><div class="box"><small>Lượt xả</small><span style="color:var(--red)">${G.disc??'-'}</span></div>
+ <div class="box"><small>Tiền</small><span class="money">$${G.money}</span></div><div class="box"><small>Ante</small>${G.ante}/8</div></div>
+ <button class="b-grey" id="help">Hướng dẫn &amp; bảng điểm</button><button class="b-grey" id="mute">${mute?'Bật âm thanh':'Tắt âm thanh'}</button></div>`;
+}
+function render(){
+ let m='';
+ const ph=G.phase;if(ph=='blind')save();
+ if(ph=='deck')m=`<h1 class="tt">Chọn bộ bài</h1><div class="row"><button id="stk" class="b-grey">Stake ${G.stake}/4: ${stakeName(G.stake)}</button><button class="b-grey" title="Stake 2: mất $1 đầu run; Stake 3: mất $2 và giảm 1 lượt xả; Stake 4: shop đắt hơn $1">Luật Stake</button><button id="col" class="b-grey">Danh sách Joker</button>${hasSave()?'<button id="resume" class="b-gold">Tiếp tục ván đã lưu</button>':''}</div><p style="text-align:center;opacity:.75">${statTxt()}</p><div class="blinds">${DECKS.map((d,i)=>`<div class="bl cur"><div class="blind">${d.n}</div><div style="font-family:system-ui">${d.d}</div><button class="b-red" data-dk="${i}">Chọn</button></div>`).join('')}</div>`;
+ if(ph=='pack'){m=`<h1 class="tt">Mở gói</h1><div class="shopgrid">${G.open.o.map((o,i)=>{const p=G.open.k=='p';return `<div class="item"><div class="planet" style="background:linear-gradient(160deg,#3a8a5c,#12482b);border-color:#9fe8bd"><b style="font-weight:400;color:#fff">${p?HT[o][0]:o.n}</b><br><span style="font-family:system-ui;font-size:.7rem">${p?'+'+HT[o][3]+' Chips, +'+HT[o][4]+' Mult':o.d}</span></div><button class="b-gold" data-pp="${i}">Chọn</button></div>`}).join('')}</div><div class="row"><button class="b-grey" id="pskip">Bỏ qua</button></div>`}else if(ph=='blind'){
+  m=`<h1 class="tt">Ante ${G.ante}</h1><div class="msg">${G.tagmsg||''}</div><div class="blinds">${BL.map((b,i)=>`<div class="bl ${i==G.rd?'cur':''}"><div class="blind ${b.c}">${b.n}</div><div>Đạt <span style="color:var(--gold);font-size:1.4rem">${Math.round(TB(G.ante)*b.k).toLocaleString()}</span></div><div>Thưởng $${b.r}</div>${b.c=='boss'?`<small style="font-family:system-ui">${bossNow().n}: ${bossNow().d}. Còn 3 lượt đánh</small>`:''}${i==G.rd?'<button class="b-red" id="go">Bắt đầu</button>':''}${i==G.rd&&i<2?'<button class="b-grey" id="skip">Bỏ qua (nhận Tag)</button>':''}</div>`).join('')}</div>${jokerRow()}`;
+ }else if(ph=='play'){
+  m=`${jokerRow()}${consRow()}<div class="msg">${G.msg}</div>${G.played?`<div class="hand">${G.played.map(c=>cardHTML(c).replace('class="card ',G.step&&G.step.id===c.id?'class="card sel ':'class="card ')).join('')}</div>`:''}<div class="hand">${G.hand.map(cardHTML).join('')}</div>
+  <div class="row"><button class="b-blue" id="play" ${!G.sel.size||G.busy?'disabled':''}>Đánh bài</button><button class="b-red" id="disc" ${!G.sel.size||!G.disc||G.busy?'disabled':''}>Xả bài</button><button class="b-grey" id="sr">Xếp theo số</button><button class="b-grey" id="ss">Xếp theo chất</button></div>
+  <div style="text-align:center;opacity:.7;font-size:.9rem">Bộ bài còn ${G.deck.length} lá</div>`;
+ }else if(ph=='cash'){
+  const g=G.gain;
+  m=`<h1 class="tt">Qua vòng!</h1><div class="box" style="max-width:340px;margin:0 auto;width:100%;font-size:1.2rem;line-height:1.8">Thưởng vòng: $${g.base}<br>Lượt đánh còn lại: $${g.hands}<br>Lãi ($1 mỗi $5): $${g.int}${g.gold?`<br>Vàng thưởng: $${g.gold}`:''}${g.end?`<br>Joker cuối vòng: $${g.end}`:''}<hr><b class="money">Tổng +$${g.sum}</b></div><div class="row"><button class="b-gold" id="shop">Vào cửa hàng</button></div>`;
+ }else if(ph=='shop'){
+  m=`<h1 class="tt">Cửa hàng</h1><div class="shopgrid">${G.shop.map((j,i)=>`<div class="item">${jokerHTML(j,i,true)}</div>`).join('')}${G.planets.map((t,i)=>`<div class="item"><div class="planet">Hành tinh<br><b style="font-weight:400;color:#fff">${HT[t][0]}</b><br><span style="font-family:system-ui;font-size:.7rem">+${HT[t][3]} Chips<br>+${HT[t][4]} Mult<br>(cấp ${G.lv[t]})</span></div><button class="b-gold" data-pl="${i}" ${G.money<price(3)?'disabled':''}>$${price(3)}</button></div>`).join('')}${G.tarots.map((t,i)=>`<div class="item"><div class="planet" style="background:linear-gradient(160deg,#b0488a,#5c1f4a);border-color:#ffb3e0">Tarot<br><b style="font-weight:400;color:#fff">${t.n}</b><br><span style="font-family:system-ui;font-size:.7rem">${t.d}</span></div><button class="b-gold" data-ta="${i}" ${G.money<price(3)||G.cons.length>=G.consMax?'disabled':''}>$${price(3)}</button></div>`).join('')}${G.voc?`<div class="item"><div class="planet" style="background:linear-gradient(160deg,#c78a1c,#6e4708);border-color:#ffe08a">Voucher<br><b style="font-weight:400;color:#fff">${G.voc.n}</b><br><span style="font-family:system-ui;font-size:.7rem">${G.voc.d}</span></div><button class="b-gold" data-vo="1" ${G.money<price(10)?'disabled':''}>$${price(10)}</button></div>`:''}${G.packs.map((p,i)=>{const c=p.free?0:price(p.cost,'pack');return `<div class="item"><div class="planet" style="background:linear-gradient(160deg,#3a8a5c,#12482b);border-color:#9fe8bd">Gói ${p.label}<br><span style="font-family:system-ui;font-size:.7rem">Chọn ${p.n}</span></div><button class="b-gold" data-pk="${i}" ${G.money<c?'disabled':''}>${p.free?'MIỄN PHÍ':'$'+c}</button></div>`}).join('')}</div>
+  <div class="row"><button class="b-blue" id="rr" ${!G.freeReroll&&G.money<G.rr?'disabled':''}>Làm mới ${G.freeReroll?'MIỄN PHÍ':'$'+G.rr}</button><button class="b-red" id="next">Vòng tiếp theo</button></div>${jokerRow()}`;
+ }else if(ph=='over'||ph=='won'){
+  m=`<h1 class="tt">${ph=='won'?'Bạn thắng! 🎉':'Thua rồi'}</h1><p style="text-align:center">${ph=='won'?'Bạn đã vượt qua cả 8 ante.':`Dừng ở Ante ${G.ante}, ${BL[G.rd].n}. Điểm ${G.score.toLocaleString()} / ${target().toLocaleString()}.`}</p><div class="row">${ph=='won'?'<button class="b-gold" id="endless">Chơi vô hạn</button>':''}<button class="b-red" id="again">Chơi lại</button></div>`;
+ }
+ $('#app').innerHTML=side()+`<div class="main">${m}</div>`;
+ bind();
+}
+function jokerRow(){return `<div class="slots" aria-label="Joker">${G.jokers.map((j,i)=>jokerHTML(j,i)).join('')||'<span style="opacity:.6;align-self:center">Chưa có Joker (tối đa '+G.slots+')</span>'}</div>`}
+function buyPk(i){const p=G.packs[i],cost=p.free?0:price(p.cost,'pack');if(G.money<cost)return;G.money-=cost;G.packs.splice(i,1);const k=p.k,n=p.n;G.open={k,o:k=='j'?shuffle(J.filter(j=>!G.jokers.some(q=>q.n==j.n))).slice(0,n).map(mk):k=='t'?shuffle(T.slice()).slice(0,n):k=='s'?shuffle(SP.slice()).slice(0,n):shuffle(Object.keys(HT)).slice(0,n)};G.phase='pack';render()}
+function pickPk(i){const o=G.open.o[i],k=G.open.k;if(k=='j'){if(G.jokers.length>=G.slots){G.msg='';return}G.jokers.push(o)}else if(k=='t'||k=='s'){if(G.cons.length>=G.consMax)return;G.cons.push(o)}else G.lv[o]++;G.open=null;G.phase='shop';render()}
+function consRow(){return G.cons.length?`<div class="row">${G.cons.map((t,i)=>`<button style="background:#9a3d7a" data-use="${i}" title="${t.d}">${t.n}: ${t.d}</button>`).join('')}</div>`:''}
+function useT(i){const t=G.cons[i];if(G.busy)return;
+ if(t.fn){t.fn();G.cons.splice(i,1);G.msg=t.n+'!';if(G.hand.length<G.hs)draw();return render()}
+ if(t.cash)G.money+=t.cash;else if(t.gold)G.money+=Math.min(20,G.money);
+ else{const cs=G.hand.filter(c=>G.sel.has(c.id)),mx=t.max||3;
+  if(!cs.length||cs.length>mx||(t.copyCard&&cs.length!==2)){G.msg=t.copyCard?'Chọn đúng 2 lá trước khi dùng':'Chọn 1–'+mx+' lá trước khi dùng';return render()}
+  if(t.copyCard&&cs.length==2){const src=cs[0],dst=cs[1];dst.enh=src.enh;dst.seal=src.seal;G.mods[dst.id]={...(G.mods[dst.id]||{}),enh:dst.enh,seal:dst.seal}}else cs.forEach(c=>{if(t.kill){G.dead.add(c.id);G.hand.splice(G.hand.indexOf(c),1)}else{const m=G.mods[c.id]=G.mods[c.id]||{};if(t.s!=null)m.s=c.s=t.s;if(t.enh)m.enh=c.enh=t.enh;if(t.up)m.r=c.r=Math.min(14,c.r+1);if(t.seal)m.seal=c.seal=t.seal}});G.sel=new Set()}
+ G.cons.splice(i,1);G.msg=t.n+'!';if(G.hand.length<G.hs)draw();render()}
+function bind(){
+ const on=(s,f)=>{const e=$(s);if(e)e.onclick=f};
+ on('#go',startBlind);on('#play',play);on('#disc',discard);on('#shop',openShop);on('#rr',reroll);on('#next',nextBlind);on('#again',newGame);
+ on('#sr',()=>{sortHand('r');render()});on('#ss',()=>{sortHand('s');render()});on('#help',()=>help(0));
+ document.querySelectorAll('.card').forEach(e=>{e.onclick=()=>toggle(+e.dataset.id);e.onkeydown=k=>{if(k.key==' '||k.key=='Enter'){k.preventDefault();toggle(+e.dataset.id)}}});
+ document.querySelectorAll('[data-buy]').forEach(e=>e.onclick=()=>buyJ(+e.dataset.buy));
+ document.querySelectorAll('[data-sell]').forEach(e=>e.onclick=()=>sell(+e.dataset.sell));
+ document.querySelectorAll('[data-jleft]').forEach(e=>e.onclick=()=>moveJoker(+e.dataset.jleft,-1));
+ document.querySelectorAll('[data-jright]').forEach(e=>e.onclick=()=>moveJoker(+e.dataset.jright,1));
+ document.querySelectorAll('[data-pl]').forEach(e=>e.onclick=()=>buyP(+e.dataset.pl));
+ document.querySelectorAll('[data-dk]').forEach(e=>e.onclick=()=>{G.dk=DECKS[+e.dataset.dk];G.money+=G.dk.money||0;G.slots=5+(G.dk.slots||0);G.consMax+=G.dk.cons||0;(G.dk.lvUp||[]).forEach(k=>G.lv[k]++);G.phase='blind';render()});
+ document.querySelectorAll('[data-ta]').forEach(e=>e.onclick=()=>{const cost=price(3);if(G.money<cost||G.cons.length>=G.consMax)return;G.money-=cost;G.cons.push(G.tarots.splice(+e.dataset.ta,1)[0]);render()});
+ document.querySelectorAll('[data-vo]').forEach(e=>e.onclick=()=>{const cost=price(10);if(G.money<cost)return;G.money-=cost;G.vo[G.voc.k]=G.voc.v||1;if(G.voc.k=='cons')G.consMax++;if(G.voc.k=='jslot')G.slots++;G.voc=null;render()});
+ document.querySelectorAll('[data-use]').forEach(e=>e.onclick=()=>useT(+e.dataset.use));
+ on('#mute',()=>{mute=!mute;render()});on('#stk',()=>{G.stake=G.stake%4+1;render()});on('#col',col);on('#skip',skipB);on('#resume',()=>{if(load())render()});on('#endless',()=>{G.endless=true;nextBlind()});on('#pskip',()=>{G.open=null;G.phase='shop';render()});
+ document.querySelectorAll('[data-pk]').forEach(e=>e.onclick=()=>buyPk(+e.dataset.pk));
+ document.querySelectorAll('[data-pp]').forEach(e=>e.onclick=()=>pickPk(+e.dataset.pp));
+}
+const PAGES=[
+ ['Mục tiêu','Mỗi vòng có một <b>điểm mục tiêu</b>. Bạn phải đạt đủ điểm trước khi hết lượt đánh. Mỗi ante có 3 vòng (nhỏ, lớn, trùm); qua hết <b>8 ante</b> là thắng.'],
+ ['Đánh và xả bài','Bạn cầm 8 lá. Bấm để chọn tối đa <b>5 lá</b> rồi bấm <b>Đánh bài</b> để ghi điểm, hoặc <b>Xả bài</b> để đổi lá lấy bài mới (số lượt xả có hạn). Các lá đã đánh hoặc xả sẽ không quay lại trong vòng đó.'],
+ ['Cách tính điểm','Điểm = <b>Chips × Mult</b>. Mỗi tổ hợp có Chips và Mult gốc. Chỉ những lá tạo nên tổ hợp mới ghi điểm và cộng thêm Chips theo mặt bài (2–10 theo số, J/Q/K = 10, Át = 11). Ví dụ một Đôi chỉ tính hai lá của đôi đó.'],
+ ['Joker','Joker là lá đặc biệt đặt ngoài bàn (tối đa 5). Mỗi Joker cho hiệu ứng riêng: cộng Mult, cộng Chips, hoặc nhân Mult. Joker phát huy theo thứ tự từ trái sang phải. Ghép các Joker ăn ý với nhau là chìa khóa để lên điểm lớn.'],
+ ['Tiền và cửa hàng','Qua vòng bạn nhận tiền thưởng, $1 cho mỗi lượt đánh còn dư, và lãi $1 cho mỗi $5 đang giữ (tối đa $5). Ở cửa hàng, mua Joker hoặc thẻ Hành tinh (nâng cấp một loại tổ hợp), làm mới hàng hoặc bán Joker lấy một nửa giá.'],
+ ['Tarot, voucher, trùm','Tarot (tối đa 2) dùng khi đang chơi: chọn lá rồi bấm nút Tarot để đổi chất, thêm Chips/Mult vĩnh viễn hoặc xóa lá khỏi bộ bài. Voucher nâng cấp vĩnh viễn. Mỗi trùm có một hiệu ứng riêng, xem ở màn chọn vòng.'],
+ ['Gói, vô hạn','Gói ($4) cho chọn 1 trong 3 thẻ. Thắng ante 8 xong bạn có thể chơi vô hạn. Tắt âm thanh bằng nút ở thanh bên. Bỏ qua vòng nhỏ hoặc vòng lớn để nhận Tag. Joker có thể mang Edition (Foil +50 Chips, Holo +10 Mult, Poly ×1,5 Mult). Độ khó 2–4 tăng mục tiêu thêm 25% mỗi bậc, từ độ 3 còn ít hơn 1 lượt xả và từ độ 4 cửa hàng đắt hơn $1. Phím tắt: 1–9 chọn lá, P đánh, D xả. Game tự lưu ở màn chọn vòng; bấm "Tiếp tục" ở màn chọn bộ bài để chơi tiếp. Gói Spectral có Dấu vàng/xanh/tím, Thép (×1,5 Mult khi giữ trên tay), Hố đen... Enhancement, Seal và Joker synergy được giữ lại qua bộ bài. Voucher kinh tế có thể giảm giá, tăng giới hạn lãi hoặc cho reroll miễn phí.']
+];
+function help(p){
+ const last=p>=PAGES.length;
+ let body;
+ if(last){
+  body=`<h2>Bảng tổ hợp</h2><table><tr><th>Tổ hợp</th><th>Chips</th><th>Mult</th><th>Cấp</th></tr>${Object.keys(HT).map(t=>{const[c,m]=G?lvStats(t):[HT[t][1],HT[t][2]];return`<tr><td>${HT[t][0]}</td><td>${c}</td><td>${m}</td><td>${G?G.lv[t]:1}</td></tr>`}).join('')}</table><p>Mỗi lần nâng cấp, Chips và Mult của tổ hợp tăng thêm.</p>`;
+ }else body=`<h2>${PAGES[p][0]}</h2><p>${PAGES[p][1]}</p>`;
+ $('#modal').innerHTML=`<div class="modal" role="dialog" aria-modal="true"><div class="mb">${body}<div class="row" style="margin-top:12px">${p>0?`<button class="b-grey" id="hp">Quay lại</button>`:''}<button class="b-blue" id="hn">${last?'Đóng':'Tiếp'}</button><button class="b-grey" id="hx">Bỏ qua</button></div><div style="text-align:center;opacity:.6;font-size:.8rem;margin-top:6px">${Math.min(p+1,PAGES.length+1)}/${PAGES.length+1}</div></div></div>`;
+ $('#hn').onclick=()=>last?($('#modal').innerHTML=''):help(p+1);
+ $('#hx').onclick=()=>$('#modal').innerHTML='';
+ if($('#hp'))$('#hp').onclick=()=>help(p-1);
+ $('#hn').focus();
+}
+document.addEventListener('keydown',e=>{if(e.key=='Escape')$('#modal').innerHTML=''});
+document.addEventListener('keydown',e=>{if(G.phase!='play'||$('#modal').innerHTML||e.ctrlKey||e.metaKey||e.altKey)return;const k=e.key.toLowerCase();if(k>='1'&&k<='9'){const c=G.hand[+k-1];if(c)toggle(c.id)}else if(k=='p')play();else if(k=='d')discard()});
+let bi=0;setInterval(()=>{if(mute||!ac)return;snd([110,138,165,138][bi++%4],.5,'triangle')},600);
+newGame();help(0);
+</script>
+</body>
+</html>
